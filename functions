@@ -1,0 +1,192 @@
+// INSTRUCTIONS:
+//   You are to write a MARS translation of this C program.  Because
+//   this is the first assembly language program you are writing where you
+//   must deal with register conflicts and manage the stack, there are
+//   a lot of hints given in C comments about how to do the translation.
+//   In future lab exercises and on midterms, you will be expected
+//   to do this kind of translation without being given very many hints!
+
+
+// Hint: Function prototypes, such as the next two lines of C,
+// are used by a C compiler to do type checking and sometimes type
+// conversions in function calls.  They do NOT cause ANY assembly
+// language code to be generated.
+
+int shark(int arg0, int arg1, int arg2, int arg3);
+
+int whale(int cat, int dog);
+
+int tuna = 0x30000;
+
+int main(void)
+{
+  // Hint: This is a nonleaf procedure, so it needs a stack frame.
+
+  // Instruction: Normally you could pick whatever two s-registers you
+  // like for horse and cow, but in this exercise you must use $s0
+  // for horse and $s1 for cow.
+
+  int horse;
+  int cow;
+  horse = 0x6000;
+  cow = 0x2000;
+  cow += shark(5, 4, 3, 2);
+  horse += (cow + 2 * tuna);
+
+  // At this point horse should have a value of 0x6824b
+ 
+  return 0;
+}
+
+int shark(int arg0, int arg1, int arg2, int arg3)
+{
+  // Hint: This is a nonleaf procedure, so it needs a stack frame,
+  // and you will have to make copies of the incoming arguments so
+  // that a-registers are free for outgoing arguments.
+
+  // Instructions: Normally you would have a lot of freedom within the
+  // calling conventions about what s-registers you use, and about where
+  // you put copies of incoming arguments, but in this exercise you
+  // must copy arg0 to $s0, arg1 to $s1, arg2 to $s2, and arg2 to $s3, 
+  // and use $s4 for red, $s5 for blue, and $s6 for green.
+
+  int red, blue, green;
+  blue = whale(arg2, arg1);
+  green = whale(arg3, arg0);
+  red = whale(arg1, arg3);
+
+  return red + blue + green;
+}
+
+int whale(int cat, int dog)
+{
+  // Hint: this is a leaf procedure, and it shouldn't need to use any
+  // s-registers, so you should not have use the stack at all.
+  return dog + 64 * cat;
+}
+
+# BEGINNING of start-up & clean-up code.  Do NOT edit this code.
+	.data
+exit_msg_1:
+	.asciiz	"***About to exit. main returned "
+exit_msg_2:
+	.asciiz	".***\n"
+main_rv:
+	.word	0
+	
+	.text
+	# adjust $sp, then call main
+	addi	$t0, $zero, -32		# $t0 = 0xffffffe0
+	and	$sp, $sp, $t0		# round $sp down to multiple of 32
+	jal	main
+	nop
+	
+	# when main is done, print its return value, then halt the program
+	sw	$v0, main_rv	
+	la	$a0, exit_msg_1
+	addi	$v0, $zero, 4
+	syscall
+	nop
+	lw	$a0, main_rv
+	addi	$v0, $zero, 1
+	syscall
+	nop
+	la	$a0, exit_msg_2
+	addi	$v0, $zero, 4
+	syscall
+	nop
+	addi	$v0, $zero, 10
+	syscall
+	nop	
+# END of start-up & clean-up code.
+
+#Global Variable  
+	.data
+	# tuna = 0x30000
+	.globl tuna
+tuna:	.word  0x30000
+
+# Below is the stub for main. Edit it to give main the desired behaviour.
+	.text
+	.globl	main	
+main:
+	# If main needs a prologue, start it here.
+	addi $sp, $sp, -32 		# increase stack by 32
+	sw   $ra, 28($sp)		# stores incoming $ra
+	sw   $s1, 24($sp)		# stores incoming $s1
+	sw   $s0, 20($sp)		# stores incoming s0
+	
+	# Start body of main here.
+	addi $s0, $zero, 0x6000 	# horse = 0x6000
+	addi $s1, $zero, 0x2000		# cow = 0x2000
+	addi $a0, $zero, 5
+	addi $a1, $zero, 4 
+	addi $a2, $zero, 3 
+	addi $a3, $zero, 2 
+	jal shark			# shark(5,4,3,2)
+	add $s1, $s1, $v0		# cow += shark's return vaule 
+	lw  $t3, tuna			# $t3 = tuna 
+	sll $t0, $t3, 1			# $t0 = tuna * 2
+	add $t1, $s1, $t0		# $t1 = cow + tuna * 2
+	add $s0, $s0, $t1		# horse += (cow + 2 * tuna)
+	# At this point horse should have a value of 0x6824b
+	add $v0, $zero, $zero		# return value from main = 0
+	
+	# If main needs an epilogue, start it here.
+	lw   $s0, 20($sp)		# loads $s0
+	lw   $s1, 24($sp)		# loads $s1
+	lw   $ra, 28($sp)		# loads $ra
+	addi $sp, $sp, 32 		# decreases stack by 32
+	jr	$ra
+	
+shark:
+	# Shark prologue 
+	addi $sp, $sp, -32 		#increase stack by 32
+	sw   $ra, 28($sp)		# stores incoming $ra
+	sw   $s6, 24($sp)		# stores incoming $s6
+	sw   $s5, 20($sp)		# stores incoming $s5
+	sw   $s4, 16($sp)		# stores incoming $s4
+	sw   $s3, 12($sp)		# stores incoming $s3
+	sw   $s2, 8($sp)		# stores incoming $s2
+	sw   $s1, 4($sp)		# stores incoming $s1
+	sw   $s0, ($sp)			# stores incoming $s0
+	add  $s0, $zero, $a0		# $s0 = $a0
+	add  $s1, $zero, $a1		# $s1 = $a1
+	add  $s2, $zero, $a2		# $s2 = $a2
+	add  $s3, $zero, $a3		# $s3 = $a3
+	
+	#Shark body 
+	add  $a0, $zero, $s2		# $a0 = arg2
+	add  $a1, $zero, $s1		# $a1 = arg1
+	jal  whale
+	add  $s5, $zero, $v0		# blue = whale(arg2, arg1)
+	
+	add  $a0, $zero, $s3		# $a0 = arg3
+	add  $a1, $zero, $s0		# $a1 = arg0
+	jal  whale
+	add  $s6, $zero, $v0		# green = whale(arg2, arg1)
+	
+	add  $a0, $zero, $s1		# $a0 = arg1
+	add  $a1, $zero, $s3		# $a1 = arg3
+	jal  whale
+	add  $s4, $zero, $v0		# red = whale(arg2, arg1)
+		
+	add  $t0, $s5, $s6		# $t0 = blue + green	
+	add  $v0, $t0, $s4		# $v0 = $t0 + red
+	 
+	# Shark epilogue
+	lw   $s0, ($sp)			# loads $s0
+	lw   $s1, 4($sp)		# loads $s1
+	lw   $s2, 8($sp)		# loads $s2
+	lw   $s3, 12($sp)		# loads $s3
+	lw   $s4, 16($sp)		# loads $s4
+	lw   $s5, 20($sp)		# loads $s5
+	lw   $s6, 24($sp)		# loads $s6
+	lw   $ra, 28($sp)		# loads $ra
+	addi $sp, $sp, 32 		#increase stack by 32
+	jr   $ra
+	
+whale:
+	sll $t0, $a0, 6			# $t0 = cat * 64
+	add $v0, $t0, $a1		# return dog + $t0
+	jr $ra
